@@ -1,5 +1,6 @@
 #!/bin/bash
 
+## THIS SCRIPT ASSUMES IT IS RUN ON THE HOST MACHINE 
 #--------MANUAL SETUP START--------------------
 
 ##------------Set up networking
@@ -11,6 +12,7 @@
 #echo "NETWORKING=yes" >> /etc/sysconfig/network
 #echo "HOSTNAME=centos7" >> /etc/sysconfig/network
 #echo "GATEWAY=192.168.254.1" >> /etc/sysconfig/network
+#systemctl restart network
 #echo "nameserver 8.8.8.8" >> /etc/resolv.conf
 #echo "nameserver 8.8.4.4" >> /etc/resolv.conf
 
@@ -34,7 +36,8 @@
 
 ##------------------SSH from host machine
 #ssh -p 50022 admin@127.0.0.1
-##SCP to copy pub key file
+
+##------------------SCP to copy pub key file
 #scp -P 50022 acit_admin_id_rsa.pub admin@127.0.0.1:/home/admin/.ssh
 
 ##------------------Copy pub file into authorized keys
@@ -42,8 +45,12 @@
 
 ##-----------------MANUAL SETUP END----------------------------------
 
+
+
 #------------------disable SELinux
 ssh wp "
+sudo sh -c 'echo \"nameserver 8.8.8.8\" >> /etc/resolv.conf';
+sudo sh -c 'echo \"nameserver 8.8.4.4\" >> /etc/resolv.conf';
 echo 'Disabling SELinux...';
 sudo setenforce 0; 
 sudo sed -r -i 's/SELINUX=(enforcing|disabled)/SELINUX=permissive/' /etc/selinux/config;
@@ -84,14 +91,18 @@ ssh wp "
 echo 'MariaDB setup...';
 sudo yum install -y mariadb-server mariadb;
 sudo systemctl start mariadb;
+exit
+"
+scp mariadb_security_config.sql wp:/home/admin
 
-touch mariadb_security_config.sql;
-echo \"UPDATE mysql.user SET Password=PASSWORD('P@ssw0rd') WHERE User='root';\" >> mariadb_security_config.sql;
-echo \"DELETE FROM mysql.user WHERE User='';\" >> mariadb_security_config.sql;
-echo \"DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');\" >> mariadb_security_config.sql;
-echo \"DROP DATABASE test;\" >> mariadb_security_config.sql;
-echo \"DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';\" >> mariadb_security_config.sql;
-echo \"P@ssw0rd\" | mysql -u root -p < mariadb_security_config.sql;
+# touch mariadb_security_config.sql;
+# echo \"UPDATE mysql.user SET Password=PASSWORD('P@ssw0rd') WHERE User='root';\" >> mariadb_security_config.sql;
+# echo \"DELETE FROM mysql.user WHERE User='';\" >> mariadb_security_config.sql;
+# echo \"DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');\" >> mariadb_security_config.sql;
+# echo \"DROP DATABASE test;\" >> mariadb_security_config.sql;
+# echo \"DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';\" >> mariadb_security_config.sql;
+ssh wp "
+sudo mysql -u root < mariadb_security_config.sql;
 sudo systemctl enable mariadb;
 exit
 "
@@ -100,23 +111,28 @@ exit
 ssh wp "
 echo 'PHP Setup...';
 sudo yum install -y php php-mysql php-fpm;
-sudo sed -i -e 's/;cgi.fix_pathinfo=1/chi.fix_pathinfo=0/g' /etc/php.ini;
-sudo sed -i -e 's#listen = 127.0.0.1:9000#listen = /var/run/php-fpm/php-fpm.sock#g' /etc/php-fpm.d/www.conf;
-sudo sed -i -e 's#;listen.owner = nobody#listen.owner = nobody#g' /etc/php-fpm.d/www.conf;
-sudo sed -i -e 's#;listen.group = nobody#listen.group = nobody#g' /etc/php-fpm.d/www.conf;
-sudo sed -i -e 's#user = apache#user = nginx#g' /etc/php-fpm.d/www.conf;
-sudo sed -i -e 's#group = apache#group = nginx#g' /etc/php-fpm.d/www.conf;
-
-sudo systemctl start php-fpm;
-sudo systemctl enable php-fpm;
-
 exit
 "
-scp nginx_new.conf wp:/home/admin/
+scp php.ini wp:/home/admin
+scp www.conf wp:/home/admin
+# sudo sed -i -e 's/;cgi.fix_pathinfo=1/chi.fix_pathinfo=0/g' /etc/php.ini;
+# sudo sed -i -e 's#listen = 127.0.0.1:9000#listen = /var/run/php-fpm/php-fpm.sock#g' /etc/php-fpm.d/www.conf;
+# sudo sed -i -e 's#;listen.owner = nobody#listen.owner = nobody#g' /etc/php-fpm.d/www.conf;
+# sudo sed -i -e 's#;listen.group = nobody#listen.group = nobody#g' /etc/php-fpm.d/www.conf;
+# sudo sed -i -e 's#user = apache#user = nginx#g' /etc/php-fpm.d/www.conf;
+# sudo sed -i -e 's#group = apache#group = nginx#g' /etc/php-fpm.d/www.conf;
 
 ssh wp "
-sudo cp nginx_new.conf /etc/nginx/nginx.conf;
+sudo cp php.ini /etc/php.ini;
+sudo cp www.conf /etc/php-fpm.d;
+sudo systemctl start php-fpm;
+sudo systemctl enable php-fpm;
+exit
+"
+scp nginx_new.conf wp:/home/admin
 
+ssh wp "
+sudo cp nginx_new.conf /etc/nginx;
 sudo touch /usr/share/nginx/html/info.php;
 sudo sh -c 'echo \"<?php phpinfo(); ?>\" >> /usr/share/nginx/html/info.php';
 sudo systemctl restart nginx;
@@ -126,13 +142,17 @@ exit
 #------------------Wordpress Database Configuration
 ssh wp "
 echo 'Configuring Wordpress DB...';
-touch wp_mariadb_config.sql;
-echo \"CREATE DATABASE wordpress;\" >> wp_mariadb_config.sql;
-echo \"CREATE USER wordpress_user@localhost IDENTIFIED BY 'P@ssw0rd';\" >> wp_mariadb_config.sql;
-echo \"GRANT ALL PRIVILEGES ON wordpress.* TO wordpress_user@localhost;\" >> wp_mariadb_config.sql;
-echo \"FLUSH PRIVILEGES;\" >> wp_mariadb_config.sql;
+exit
+"
+# touch wp_mariadb_config.sql;
+# echo \"CREATE DATABASE wordpress;\" >> wp_mariadb_config.sql;
+# echo \"CREATE USER wordpress_user@localhost IDENTIFIED BY 'P@ssw0rd';\" >> wp_mariadb_config.sql;
+# echo \"GRANT ALL PRIVILEGES ON wordpress.* TO wordpress_user@localhost;\" >> wp_mariadb_config.sql;
+# echo \"FLUSH PRIVILEGES;\" >> wp_mariadb_config.sql;
 
-echo \"P@ssw0rd\" | mysql -u root -p < wp_mariadb_config.sql;
+scp wp_mariadb_config.sql wp:/home/admin
+ssh wp "
+sudo mysql -u root -pP@ssw0rd < wp_mariadb_config.sql;
 exit
 "
 
@@ -142,12 +162,14 @@ echo 'Wordpress Source Setup....';
 sudo yum install -y wget;
 wget https://wordpress.org/latest.tar.gz;
 tar xzvf latest.tar.gz;
-cp wordpress/wp-config-sample.php wordpress/wp-config.php;
+"
+scp wp-config.php wp:/home/admin/wordpress
+# cp wordpress/wp-config-sample.php wordpress/wp-config.php;
 
-sed -i -e 's/database_name_here/wordpress/g' ./wordpress/wp-config.php;
-sed -i -e 's/username_here/wordpress_user/g' ./wordpress/wp-config.php;
-sed -i -e 's/password_here/P@ssw0rd/g' ./wordpress/wp-config.php;
-
+# sed -i -e 's/database_name_here/wordpress/g' ./wordpress/wp-config.php;
+# sed -i -e 's/username_here/wordpress_user/g' ./wordpress/wp-config.php;
+# sed -i -e 's/password_here/P@ssw0rd/g' ./wordpress/wp-config.php;
+ssh wp "
 sudo rsync -avP wordpress/ /usr/share/nginx/html/;
 sudo mkdir /usr/share/nginx/html/wp-content/uploads;
 sudo chown -R admin:nginx /usr/share/nginx/html/*;

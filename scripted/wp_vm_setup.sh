@@ -3,7 +3,7 @@ vboxmanage () { VBoxManage.exe "$@"; }
 declare script_path="$(readlink -f $0)"
 declare script_dir=$(dirname "${script_path}")
 
-declare vm_name="WP_VM"
+declare vm_name="WP_VM2"
 vboxmanage createvm --name ${vm_name} --register
 
 declare vm_info="$(VBoxManage.exe showvminfo "${vm_name}")"
@@ -14,7 +14,7 @@ declare vm_directory_linux="$(echo ${vm_conf_file} | sed 's/Config file:\s\+// ;
 vm_directory_linux="$(dirname "$vm_directory_linux")"
 
 #echo "${vm_directory_linux}"
-#echo "${vm_directory_win}"
+#echo "${vm_directory_win}" 
 #echo "${vm_conf_line}"
 #echo "${vm_conf_file}"
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+#
 vboxmanage () { VBoxManage.exe "$@"; }
 declare script_path="$(readlink -f $0)"
 declare script_dir=$(dirname "${script_path}")
