@@ -1,0 +1,8 @@
+[Unit]
+After=network.target
+
+[Service]
+ExecStart=/bin/bash /home/admin/setup/wp_mariadb_config.sh
+
+[Install]
+WantedBy=multi-user.target

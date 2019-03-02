@@ -3,6 +3,11 @@ vboxmanage () { VBoxManage.exe "$@"; }
 declare script_path="$(readlink -f $0)"
 declare script_dir=$(dirname "${script_path}")
 
+vboxmanage startvm "acit_4640_pxe"
+until [[ $(ssh -q pxe exit && echo "online") == "online" ]] ; do
+  sleep 10s
+  echo "waiting for pxe server to come online"
+done
 scp ./kickstart/wp_ks.cfg pxe:/usr/share/nginx/html/
 scp -r ./setup pxe:/usr/share/nginx/html/
 ssh pxe 'sudo chown nginx:wheel /usr/share/nginx/html/wp_ks.cfg'
@@ -10,7 +15,7 @@ ssh pxe 'chmod ugo+r /usr/share/nginx/html/wp_ks.cfg'
 ssh pxe 'chmod ugo+rx /usr/share/nginx/html/setup'
 ssh pxe 'chmod -R ugo+r /usr/share/nginx/html/setup/*'
 
-declare vm_name="WP_VM3"
+declare vm_name="WP_VM_Homy"
 vboxmanage createvm --name ${vm_name} --register
 
 declare vm_info="$(VBoxManage.exe showvminfo "${vm_name}")"
