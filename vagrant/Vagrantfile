@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  #General configuration
+  config.ssh.username = "admin"
+  config.ssh.private_key_path = "../packer/acit_4640_base/acit_admin_id_rsa"
+  
+  #Specifiy the base box here
+  config.vm.box = "../packer/centos_base.box"
+
+  #VM specific configuration
+  #see : https://www.vagrantup.com/docs/multi-machine/
+  config.vm.define "machine_name" do |machine_name|
+    machine_name.vm.hostname = "wp.snp.acit"
+    machine_name.vm.network "forwarded_port", guest: 443, host: 50443
+    machine_name.vm.network "forwarded_port", guest: 80, host: 50080
+    machine_name.vm.network "forwarded_port", guest: 22, host: 50022
+    machine_name.vm.provision "file", source: "../kickstart/setup", destination: "/home/admin/setup"
+    machine_name.vm.provision "file", source: "../kickstart/setup/acit_admin_id_rsa.pub", destination: "/home/admin/setup/acit_admin_id_rsa.pub"
+    machine_name.vm.provision "file", source: "../kickstart/setup/info.php", destination: "/home/admin/setup/info.php"
+    machine_name.vm.provision "file", source: "../kickstart/setup/latest.tar.gz", destination: "/home/admin/setup/latest.tar.gz"
+    machine_name.vm.provision "file", source: "../kickstart/setup/mariadb_security_config.sql", destination: "/home/admin/setup/mariadb_security_config.sql"
+    machine_name.vm.provision "file", source: "../kickstart/setup/nginx.conf", destination: "/home/admin/setup/nginx.conf"
+    machine_name.vm.provision "file", source: "../kickstart/setup/nginx_new.conf", destination: "/home/admin/setup/nginx_new.conf"
+    machine_name.vm.provision "file", source: "../kickstart/setup/php.ini", destination: "/home/admin/setup/php.ini"
+    machine_name.vm.provision "file", source: "../kickstart/setup/wp_mariadb_config.sql", destination: "/home/admin/setup/wp_mariadb_config.sql"
+    machine_name.vm.provision "file", source: "../kickstart/setup/wp-config.php", destination: "/home/admin/setup/wp-config.php"
+    machine_name.vm.provision "file", source: "../kickstart/setup/www.conf", destination: "/home/admin/setup/www.conf"
+    machine_name.vm.provision "shell" do |shell|
+      shell.path = "provisioning.sh"
+    end
+    #other machine configuration items go here
+    machine_name.vm.provider "virtualbox" do |vb|
+      vb.name = "acit_4640_packer_vagrant"
+      vb.linked_clone = true
+      vb.customize ["modifyvm", :id, "--memory", "1280"]
+      #all other provider configuration items go here
+    end
+  end
+
+  #General provisioning Configuration 
+  #config.vm.provision "shell" do |shell|
+    #path if relative is relative to the Vagrantfile
+    #shell.path = "provisioning.sh"
+  #end
+end

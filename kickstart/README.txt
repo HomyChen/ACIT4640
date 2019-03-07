@@ -1,0 +1,1 @@
+Run wp_vm_setup.sh with the PXE server running to set up the wordpress VM.

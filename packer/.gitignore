@@ -1,0 +1,4 @@
+acit_4640_base/
+output-virtualbox-iso/
+packer_cache/
+centos_base.box
