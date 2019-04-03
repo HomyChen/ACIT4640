@@ -1,0 +1,165 @@
+---
+- hosts: wp
+  become: yes
+  tasks:
+      #EPEL Repo
+
+    - name: Add repository
+      yum_repository:
+        name: epel
+        description: EPEL YUM repo
+        baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+
+      #Copy setup files
+
+    - name: Copies setup data to workstation
+      copy:
+        src: ./wp_setup_files/
+        dest: /home/admin/setup/
+        owner: admin
+        group: admin
+        mode: 0775
+
+      #Firewalld setup
+
+    - firewalld:
+        service: https
+        permanent: yes
+        state: enabled
+
+    - firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+
+    - firewalld:
+        service: ssh
+        permanent: yes
+        state: enabled     
+
+      #Install packages
+
+    - name: install nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: install php
+      package:
+        name: php
+        state: present
+
+    - name: install php-fpm
+      package:
+        name: php-fpm
+        state: present
+
+    - name: install php-mysql
+      package:
+        name: php-mysql
+        state: present
+
+    - name: install mariadb-server
+      package:
+        name: mariadb-server
+        state: present
+
+    - name: install mariadb
+      package:
+        name: mariadb
+        state: present
+
+    - name: install rsync
+      package:
+        name: rsync
+        state: present   
+
+      #Copy Setup files
+
+    - name: Copies php.ini file to workstation
+      copy:
+        src: ./wp_setup_files/php.ini
+        dest: /etc/php.ini
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copies www.conf file to workstation
+      copy:
+        src: ./wp_setup_files/www.conf
+        dest: /etc/php-fpm.d/www.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copies nginx.conf file to workstation
+      copy:
+        src: ./wp_setup_files/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copies info.php file to workstation
+      copy:
+        src: ./wp_setup_files/info.php
+        dest: /usr/share/nginx/html/info.php
+        owner: admin
+        group: nginx
+        mode: 0775
+
+    - name: Copies wordpress zip to workstation
+      copy:
+        src: ./wp_setup_files/latest.tar.gz
+        dest: /home/admin/latest.tar.gz
+        owner: root
+        group: root
+        mode: 0755
+
+      #Wordpress Setup
+    - name: Extract wordpress tar
+      unarchive:
+        src: ./wp_setup_files/latest.tar.gz
+        dest: /home/admin/
+
+    - name: copy wordpress config file to correct location
+      command: cp /home/admin/setup/wp-config.php /home/admin/wordpress/wp-config.php
+
+    - name: sync wordpress files
+      command: rsync -avP /home/admin/wordpress/ /usr/share/nginx/html/
+
+    - file:
+        path: /usr/share/nginx/html/
+        recurse: yes
+        owner: admin
+        group: nginx
+
+      #Restart services
+    - name: Restart mariadb
+      service:
+        name: mariadb
+        state: restarted
+        enabled: yes
+
+    - name: Restart php-fpm
+      service:
+        name: php-fpm
+        state: restarted
+        enabled: yes
+
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    - name: Restart firewalld
+      service:
+        name: firewalld
+        state: restarted
+        enabled: yes
+
+    - name: Run script to setup mariadb and change ownership of nginx files
+      script: ./wp_setup_files/provisioning.sh
+
+
