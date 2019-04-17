@@ -1,0 +1,48 @@
+---
+# tasks file for php
+- name: install php
+  package:
+    name: php
+    state: present
+  become: true
+
+- name: install php-fpm
+  package:
+    name: php-fpm
+    state: present
+  become: true
+
+- name: install php-mysql
+  package:
+    name: php-mysql
+    state: present
+  become: true
+
+- name: Copies php.ini file to workstation
+  copy:
+    src: php.ini
+    dest: /etc/php.ini
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+
+- name: Copies www.conf file to workstation
+  copy:
+    src: www.conf
+    dest: /etc/php-fpm.d/www.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+  notify: 
+    - Restart php-fpm
+
+- name: Copies info.php file to workstation
+  copy:
+    src: info.php
+    dest: /usr/share/nginx/html/info.php
+    owner: admin
+    group: nginx
+    mode: 0775
+  become: true

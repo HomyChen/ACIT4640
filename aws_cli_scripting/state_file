@@ -1,0 +1,8 @@
+vpc_id=vpc-05fd76468d1777079
+subnet_id=subnet-07e62d47ffc8b1556
+gateway_id=igw-09bd866e2caeca7f7
+route_table_id=rtb-0b98a4a97b3998b21
+rt_association_id=rtbassoc-0ba4d3193cbf429ef
+security_group_id=sg-0a4df08080746466a
+elastic_ip_allocation_id=eipalloc-0c6f3c7e50e66cc10
+elastic_ip=52.11.142.52

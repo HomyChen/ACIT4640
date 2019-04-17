@@ -1,0 +1,51 @@
+---
+# tasks file for php
+- name: create wordpress db
+  mysql_db:
+    login_user: "{{ mariadb_priv_user }}"
+    login_password: "{{ mariadb_priv_user_passwd }}"
+    name: "{{ wordpress_db }}"
+  become: true
+
+- name: create wordpress db user 
+  mysql_user: 
+    login_user: "{{ mariadb_priv_user }}"
+    login_password: "{{ mariadb_priv_user_passwd }}"
+    name: "{{ wordpress_db_user }}"
+    password: "{{ wordpress_db_user_passwd }}"
+    priv: "{{ wordpress_db }}.*:ALL"
+    state: present
+  become: true
+
+- name: install rsync
+  package:
+    name: rsync
+    state: present   
+  become: true
+
+- name: Extract wordpress tar
+  unarchive:
+    src: latest.tar.gz
+    dest: /home/admin/
+  become: true
+
+- name: Copies setup data to workstation
+  copy:
+    src: wp-config.php
+    dest: /home/admin/wordpress/wp-config.php
+    owner: admin
+    group: admin
+    mode: 0775
+  become: true
+
+- name: sync wordpress files
+  command: rsync -avP /home/admin/wordpress/ /usr/share/nginx/html/
+  become: true
+
+- file:
+    path: /usr/share/nginx/html/
+    recurse: yes
+    owner: admin
+    group: nginx
+  become: true
+  

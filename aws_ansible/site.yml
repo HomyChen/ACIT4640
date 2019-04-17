@@ -1,0 +1,59 @@
+---
+- hosts: localhost
+  connection: local 
+  tags:
+    - provision
+  vars:
+    region: us-west-2
+    availability_zone: "us-west-2a"
+    vpc_name: "4640_vpc_3"
+    vpc_cidr: 172.16.0.0/16
+    subnet_cidr: 172.16.3.0/24
+    subnet_name: "4640_sn_web_3"
+    igw_name: "4640_gw_3"
+    rt_name: "4640_web_rt_3"
+    default_cidr: 0.0.0.0/0
+    sg_name: "4640_web_sg_3"
+    sg_description: "Allow http, https, and ssh access from bcit and home"
+    bcit_cidr: 142.232.0.0/16
+    ami_id: "ami-01ed306a12b7d1c96"
+    ec2_instance_name: "wp3"
+    ec2_instance_type: "t2.micro"
+    ec2_instance_group: "wordpress"
+    ssh_key_name: "hchen_aim_key"
+    home_cidr: 0.0.0.0/0
+
+  roles:
+    - { role: roles/vpc_setup }
+    - { role: roles/sg_setup }
+    - { role: roles/ec2_setup }
+    - { role: roles/eid_setup }
+
+- hosts: tag_group_wordpress
+  become: yes
+  tasks:
+    - name: Add repository
+      yum_repository:
+        name: epel
+        description: EPEL YUM repo
+        baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+
+
+- hosts: tag_group_wordpress
+  vars:
+    ansible_user: centos
+    mariadb_priv_user: root
+    mariadb_priv_user_passwd: password
+    wordpress_db: wordpress
+    wordpress_db_user: wordpress_user
+    wordpress_db_user_passwd: P@ssw0rd
+
+  tags:
+    - configure
+  roles:
+    - nginx
+    - php
+    - mariadb
+    - wordpress
+    
+

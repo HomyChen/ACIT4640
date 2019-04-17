@@ -1,0 +1,46 @@
+---
+# tasks file for nginx
+- name: Add repository
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  become: true
+
+- firewalld:
+    service: https
+    permanent: yes
+    state: enabled
+    immediate: yes
+  become: true
+
+- firewalld:
+    service: http
+    permanent: yes
+    state: enabled
+    immediate: yes
+  become: true
+
+- firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled   
+    immediate: yes
+  become: true
+
+- name: install nginx
+  package:
+    name: nginx
+    state: present
+  become: true
+
+- name: Copies nginx.conf file to workstation
+  copy:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+  notify: 
+    - restart nginx
